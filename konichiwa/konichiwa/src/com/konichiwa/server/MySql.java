@@ -22,7 +22,7 @@ import android.util.Log;
 
 public class MySql {
 
-	private static final String PATH = "http://www.programmerfuel.com/dydwo8/queries/";
+	private static final String PATH = "***********************";
 	private static final int TIMEOUT_MILLISEC = 10000;
 	private static final String GET_SERVER_INFO = "my_query_server_info.php";
 

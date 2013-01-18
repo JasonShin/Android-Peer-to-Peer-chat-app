@@ -2,12 +2,12 @@ package com.konichiwa.server;
 
 public class ServerInfo {
 
-	static final String serverIP = "50.112.251.50";
-	//static final String serverIP = "192.168.123.136";
+	static final String serverIP = "*****************";
+	//static final String serverIP = "****************";
 	//for the public network
 	static final int port = 443;
 	//static final int port = 53321;
-	private static final String SERVER_IMAGE_PATH = "http://jasondatabase.uphero.com/konimages/";
+	private static final String SERVER_IMAGE_PATH = "***********";
 
 	
 	public static String getServerIP() {
