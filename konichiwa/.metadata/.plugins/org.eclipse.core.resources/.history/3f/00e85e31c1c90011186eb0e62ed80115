@@ -1,0 +1,66 @@
+package com.konichiwalivejason.www;
+
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
+
+import android.content.Context;
+import android.net.DhcpInfo;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
+import android.util.Log;
+
+public class UserDetail {
+	private static final String TIME_ZONE = "Australia/Sydney";
+	
+	public UserDetail(Context c) {
+
+	}
+
+
+	public static long getAusFullTime() {
+		Calendar cal = new GregorianCalendar(TimeZone.getTimeZone(TIME_ZONE));
+		Date d = cal.getTime();
+		long secsInMill = d.getTime() / 1000;
+		//String time = String.format("%d:%02d:%02d", hour12, minutes, seconds);
+		return secsInMill;
+	}
+	
+	/*public static String getWifiIpAddress(Context c) {
+		WifiManager manager = (WifiManager) c.getSystemService(c.WIFI_SERVICE);
+		DhcpInfo info = manager.getDhcpInfo();
+		WifiInfo wifiInfo = manager.getConnectionInfo();
+		int ip3 = wifiInfo.getIpAddress();
+		String ip = intToIp(info.serverAddress);
+		String ip2 = intToIp(info.ipAddress);
+		return ip;
+	}
+
+	private static String intToIp(int i) {
+
+		return ((i >> 24) & 0xFF) + "." + ((i >> 16) & 0xFF) + "." + ((i >> 8) & 0xFF) + "." + (i & 0xFF);
+	}
+*/
+	public static String getLocalIpAddress() {
+		try {
+			for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+				NetworkInterface intf = en.nextElement();
+				for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+					InetAddress inetAddress = enumIpAddr.nextElement();
+					if (!inetAddress.isLoopbackAddress()) {
+						return inetAddress.getHostAddress().toString();
+					}
+				}
+			}
+		} catch (SocketException ex) {
+			Log.e("foo", ex.toString());
+		}
+		return null;
+	}
+
+}

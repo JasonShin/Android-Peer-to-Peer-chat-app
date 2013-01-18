@@ -1,0 +1,36 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout_root"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="horizontal"
+    android:padding="10dp"
+    android:weightSum="1" >
+
+    <ImageView
+        android:id="@+id/bg_one"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight=".33"
+        android:background="#2a3748"
+        android:padding="2dp"
+        android:src="@drawable/pat_one_thumb" />
+    <ImageView
+        android:id="@+id/bg_two"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="2dp"
+        android:layout_weight=".33"
+        android:background="#2a3748"
+        android:padding="2dp"
+        android:src="@drawable/pat_two_thumb" />
+    <ImageView
+        android:id="@+id/bg_three"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="2dp"
+        android:layout_weight=".34"
+        android:background="#2a3748"
+        android:padding="2dp"
+        android:src="@drawable/pat_three_thumb" />
+
+</LinearLayout>

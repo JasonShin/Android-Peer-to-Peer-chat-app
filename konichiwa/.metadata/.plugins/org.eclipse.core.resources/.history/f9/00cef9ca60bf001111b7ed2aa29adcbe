@@ -1,0 +1,185 @@
+package com.konichiwalivejason.www;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OptionalDataException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+
+import android.os.Handler;
+import android.util.Log;
+
+public class Server {
+
+	private ServerSocket ss;
+	private static final int PORT = 59591;
+	private ObjectOutputStream output;
+	private ObjectInputStream input;
+	private Socket connection;
+	private ArrayList<Chats> al;
+	private Thread blinker;
+	private Thread onlineCheckBlinker;
+	private Handler handler;
+	private Handler handler3;
+	private String IP;
+
+	// ------------------------------------------------------------------------------------
+
+	public Server() {
+		connection = new Socket();
+
+	}
+
+	// ------------------------------------------------------------------------------------
+
+	public void startAcceptingClient(ArrayList<Chats> al, Handler h, Handler h3) {
+		this.al = al;
+		this.handler = h;
+		this.handler3 = h3;
+		try {
+			InetAddress thisIp = InetAddress.getLocalHost();
+			IP = thisIp.getHostAddress();
+			Log.i("sv", "My CURRENT IP: " + IP);
+			MainThread mt = new MainThread();
+			mt.start();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+
+	// ------------------------------------------------------------------------------------
+
+	class MainThread extends Thread implements Runnable {
+		public MainThread() {
+			blinker = this;
+		}
+		@Override
+		public void run() {
+			try {
+				try {
+					Log.i("sv", "I AM ACCEPTING AN CLIENT");
+					acceptingUser();
+					setUpStreams();
+					handler3.sendEmptyMessage(1);
+					OnlineCheckClass occ = new OnlineCheckClass();
+					occ.start();
+					listeningToClient();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					Log.i("sv", "Problem found at main thread IO: " + e);
+					ss.close();
+					Log.i("sv", "Successfully closed server socket!");
+				} catch (ClassNotFoundException e) {
+					// TODO Auto-generated catch block
+					Log.i("sv", "CLASS WAS NOT FOUND: " + e);
+				}
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				Log.i("sv", "Failed to close server socket!");
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------------------------
+
+	private void acceptingUser() throws IOException {
+
+		ss = new ServerSocket(PORT);
+		Log.i("sv", "Successfully created a socket");
+		connection = ss.accept();
+	}
+
+	// ------------------------------------------------------------------------------------
+
+	private void setUpStreams() throws IOException {
+		output = new ObjectOutputStream(connection.getOutputStream());
+		output.flush();
+		input = new ObjectInputStream(connection.getInputStream());
+	}
+
+	// ------------------------------------------------------------------------------------
+
+	private void listeningToClient() throws OptionalDataException, ClassNotFoundException, IOException {
+		while (blinker != null) {
+			String message = (String) input.readObject();
+			al.add(new Chats(R.drawable.ic_launcher, message, 0));
+			handler.sendEmptyMessage(1);
+		}
+	}
+
+	// ------------------------------------------------------------------------------------
+
+	public void sendToClient(String m) throws IOException {
+		output.writeObject("$$$$$$" + m);
+		al.add(new Chats(R.drawable.ic_launcher, m, 0));
+		handler.sendEmptyMessage(1);
+	}
+
+	// ------------------------------------------------------------------------------------
+
+	class OnlineCheckClass extends Thread implements Runnable {
+
+		public OnlineCheckClass() {
+			onlineCheckBlinker = this;
+		}
+
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			super.run();
+			Thread thisThread = Thread.currentThread();
+
+			while (onlineCheckBlinker == thisThread) {
+				try {
+					output.writeObject("%%%%%%");
+					Thread.sleep(7000);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+			}
+		}
+
+	}
+
+	// ------------------------------------------------------------------------------------
+
+	protected void stopThread() {
+		try {
+			Thread tmp = blinker;
+			Thread tmp2 = onlineCheckBlinker;
+			onlineCheckBlinker = null;
+			blinker = null;
+			if (tmp != null) {
+
+				tmp.interrupt();
+				//it triggers when class starts to listen
+				if (tmp2 != null)
+					tmp2.interrupt();
+
+				connection.close();
+				if (input != null && output != null) {
+					input.close();
+					output.close();
+				}
+				Log.i("sv", "Stopping server thread 5");
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			Log.i("cl", "Failed to close socket and IO!");
+		}
+
+	}
+
+	// ------------------------------------------------------------------------------------
+}

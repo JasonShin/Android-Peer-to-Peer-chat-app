@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="#FFFFFF"
+    android:orientation="vertical" >
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Your opponent profile"
+        android:textColor="#000000"
+        android:textSize="16dp"
+        android:textStyle="normal" />
+
+    <TextView
+        android:id="@+id/tv_oppo_prof"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_marginLeft="10dp"
+        android:gravity="center_vertical"
+        android:padding="5dp"
+        android:text="workedworked"
+        android:textColor="#000000"
+        android:textSize="14dp"
+        android:textStyle="normal" />
+
+</LinearLayout>

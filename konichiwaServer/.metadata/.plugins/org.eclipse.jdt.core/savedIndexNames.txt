@@ -1,0 +1,20 @@
+INDEX VERSION 1.126+F:\Java\Android\konichiwaServer\.metadata\.plugins\org.eclipse.jdt.core
+1115467115.index
+163172794.index
+3065916431.index
+1995173708.index
+1775439870.index
+3622326327.index
+1711783140.index
+1819252784.index
+2432244523.index
+4173023868.index
+4108727661.index
+1697886153.index
+30765161.index
+3133528496.index
+305854171.index
+4155206848.index
+1498219845.index
+1409344072.index
+3974580528.index

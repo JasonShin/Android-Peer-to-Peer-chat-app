@@ -1,0 +1,33 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout_root"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical"
+    android:padding="10dp"
+    android:weightSum="1" >
+
+    <EditText
+        android:id="@+id/et_my_prof_value"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:gravity="top"
+        android:maxLength="250"
+        android:minHeight="200dp"
+        android:minWidth="200dp" />
+
+    <TextView
+        android:id="@+id/tv_my_text_description"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="Please write within 250 characters"
+        android:textSize="12dp"
+        android:textStyle="italic" />
+
+    <Button
+        android:id="@+id/but_prof_confirm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="200dp"
+        android:text="confirm" />
+
+</LinearLayout>

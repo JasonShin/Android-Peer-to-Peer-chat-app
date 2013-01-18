@@ -1,0 +1,171 @@
+package com.konichiwalivejason.www;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OptionalDataException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import android.content.Context;
+import android.os.Handler;
+import android.util.Log;
+
+public class Client {
+
+	private Thread blinker; //for main thread
+	private ObjectOutputStream output;
+	private ObjectInputStream input;
+	private Socket connection;
+	private Context context;
+	private ArrayList<Chats> al;
+	private Handler scrollToBottomHandler;
+	private Handler finishDialogHandler;
+	private Handler successDialogDismissHandler;
+	private Handler disconnectionHandler;
+	private boolean connected = false;
+
+	public Client(Context context) {
+		this.context = context;
+		Log.i("cl", "I AM CURRENTLY BEING A CLIENT 2");
+
+	}
+
+	// --------------------------------------------------------------------------
+	//0 = server, 1 = client
+	public void conntectToServer(ArrayList<Chats> al, Handler scrollBottom, Handler success, Handler finish, Handler disconnect) throws IOException {
+		Log.i("cl", "works");
+		this.al = al;
+		this.scrollToBottomHandler = scrollBottom;
+		this.successDialogDismissHandler = success;
+		this.finishDialogHandler = finish;
+		this.disconnectionHandler = disconnect;
+
+		MainThread mt = new MainThread();
+		mt.start();
+
+	}
+
+	// --------------------------------------------------------------------------
+	class MainThread extends Thread implements Runnable {
+		//private static final int TIME_OUT = 5000;
+		private MySql sql = new MySql(context);
+		public MainThread() {
+			blinker = this;
+		}
+
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			super.run();
+			Thread thisThread = currentThread();
+			try {
+
+				connectToServer();
+
+				if (connected) {
+					successDialogDismissHandler.sendEmptyMessage(1);
+					setUpStreams();
+					while (blinker == thisThread) {
+						startListening();
+					}
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				Log.e("cl", "Found IO Exception!: " + e);
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				Log.e("cl", "Found class not found exception!: " + e);
+			}
+
+		}
+
+		private void setUpStreams() throws IOException {
+			output = new ObjectOutputStream(connection.getOutputStream());
+			output.flush();
+			input = new ObjectInputStream(connection.getInputStream());
+		}
+
+	}
+
+	private void connectToServer() {
+
+		try {
+			String SERVER_IP = UserDetail.getServerIp();
+			int PORT = UserDetail.getServerPort();
+			Pattern pattern = Pattern.compile("(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)");
+			Matcher matcher = pattern.matcher(SERVER_IP);
+			boolean validated = (matcher.find() && matcher.group().equals(SERVER_IP));
+			if (validated) {
+				connection = new Socket(SERVER_IP, PORT);
+				Log.i("cl", "Successfully connected with a server!");
+				connected = true;
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			Log.i("cl", "Client IO error!: " + e);
+		}
+
+	}
+	// --------------------------------------------------------------------------
+	private void startListening() throws OptionalDataException, ClassNotFoundException, IOException {
+
+		String message = (String) input.readObject();
+
+		if (message.startsWith(MessageFilter.getNormalMessageCode())) {
+			String normalMessage = MessageFilter.filterMessage(message);
+			al.add(new Chats(R.drawable.ic_launcher, normalMessage, 1));
+			scrollToBottomHandler.sendEmptyMessage(1);
+
+		} else if (message.startsWith(MessageFilter.getImageFileCode())) {
+			String imageMessage = MessageFilter.filterMessage(message);
+
+		} else {
+			//String heartBeatMessage = MessageFilter.filterMessage(message);
+			Log.i("cl", "Received heart beat from the server");
+		}
+
+	}
+
+	// --------------------------------------------------------------------------
+
+	public void sendString(String msg) {
+		try {
+			output.writeObject(msg);
+			Log.i("cl", "Successfully written a message");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			Log.i("cl", "Found Error while sending string!");
+		}
+	}
+
+	// --------------------------------------------------------------------------
+
+	protected void stopThread() {
+		//Main Thread
+		try {
+			Thread tmp = blinker;
+			blinker = null;
+			disconnectionHandler.sendEmptyMessage(1);
+			if (tmp != null) {
+				tmp.interrupt();
+
+				if (connected) {
+					connection.close();
+					input.close();
+					output.close();
+				}
+			}
+
+		} catch (IOException e) {
+			Log.i("cl", "Problem found while trying to shutting down Main thread!: " + e);
+		}
+
+	}
+
+	// --------------------------------------------------------------------------
+
+}

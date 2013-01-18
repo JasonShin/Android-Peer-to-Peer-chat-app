@@ -1,0 +1,606 @@
+package com.konichiwalivejason.www;
+
+import java.io.IOException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+
+import android.app.Activity;
+import android.app.Dialog;
+import android.app.ListActivity;
+import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnCancelListener;
+import android.content.Intent;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.provider.MediaStore;
+import android.util.Log;
+import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.ViewGroup;
+import android.widget.AbsListView;
+import android.widget.AbsListView.OnScrollListener;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class OneOnOneChatActivity extends ListActivity implements OnClickListener, OnScrollListener, OnCancelListener {
+	private ArrayList<Chats> al;
+	private CustomAdapter adapter;
+	private ArrayList<ChatImage> cal;
+	private Client client;
+	private char START_BUTTON_MESSAGE = 's';
+	private char FINISH_DIALOG_MESSAGE = 'n';
+	private ProgressDialog loading_pd;
+	private boolean loading = false;
+	private Dialog quit_app_dialog;
+
+	private Handler scrollToBottomHandler = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			// TODO Auto-generated method stub
+			super.handleMessage(msg);
+			adapter.notifyDataSetChanged();
+			scrollToBottomOnCondition(true);
+		}
+
+	};
+
+	//This is for connect and disconnect button
+	private Handler chatStartButtonHandler = new Handler() {
+		private static final char CHAR_START = 's';
+		private static final char CHAR_STOP = 't';
+		@Override
+		public void handleMessage(Message msg) {
+			// TODO Auto-generated method stub
+			super.handleMessage(msg);
+			TextView startBut = (TextView) findViewById(R.id.tv_start_but);
+			TextView disconnectBut = (TextView) findViewById(R.id.tv_discon_but);
+
+			switch (START_BUTTON_MESSAGE) {
+				case CHAR_START :
+					startBut.setVisibility(View.INVISIBLE);
+					disconnectBut.setVisibility(View.VISIBLE);
+					break;
+				case CHAR_STOP :
+					startBut.setVisibility(View.VISIBLE);
+					disconnectBut.setVisibility(View.INVISIBLE);
+					break;
+			}
+			adapter.notifyDataSetChanged();
+			scrollToBottomOnCondition(false);
+		}
+
+	};
+
+	private Handler successDialogDismissHandler = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			// TODO Auto-generated method stub
+			super.handleMessage(msg);
+			setGuiInputMode(true);
+			loading_pd.dismiss();
+			al.add(new Chats("You have been successfully connected with an user!", 2));
+			adapter.notifyDataSetChanged();
+
+		}
+
+	};
+
+	private Handler finishDialogHandler = new Handler() {
+
+		static final char NORMAL_MESSAGE = 'n';
+		static final char CANCEL_MESSAGE = 'c';
+
+		@Override
+		public void handleMessage(Message msg) {
+			// TODO Auto-generated method stub
+			super.handleMessage(msg);
+			loading_pd.dismiss();
+			switch (FINISH_DIALOG_MESSAGE) {
+				case NORMAL_MESSAGE :
+					al.add(new Chats("Sorry, there are no users online currently. Please try again in 60 seconds.", 2));
+					break;
+				case CANCEL_MESSAGE :
+					al.add(new Chats("You have cancelled to connect to an user!", 2));
+					FINISH_DIALOG_MESSAGE = 'n';
+					break;
+			}
+
+			adapter.notifyDataSetChanged();
+			scrollToBottomOnCondition(false);
+			START_BUTTON_MESSAGE = 't';
+			chatStartButtonHandler.sendEmptyMessage(1);
+		}
+
+	};
+
+	private Handler disconnectionHandler = new Handler() {
+
+		@Override
+		public void handleMessage(Message msg) {
+			// TODO Auto-generated method stub
+			super.handleMessage(msg);
+			setGuiInputMode(false);
+			al.add(new Chats("You have been disconnected!, please try to reconnect", 2));
+			START_BUTTON_MESSAGE = 't';
+			chatStartButtonHandler.sendEmptyMessage(1);
+		}
+	};
+
+	// -------------------------------------------------------------------------------------
+
+	@Override
+	public void onBackPressed() {
+		Log.i("p", "works1");
+
+		quit_app_dialog = new Dialog(OneOnOneChatActivity.this);
+		quit_app_dialog.setContentView(R.drawable.custom_quit_dialog_layout);
+		quit_app_dialog.setTitle("Are you sure you want to quit?");
+		Button but_cancel = (Button) quit_app_dialog.findViewById(R.id.but_quit_cancel);
+		Button but_ok = (Button) quit_app_dialog.findViewById(R.id.but_quit_ok);
+		but_cancel.setOnClickListener(OneOnOneChatActivity.this);
+		but_ok.setOnClickListener(OneOnOneChatActivity.this);
+		quit_app_dialog.show();
+
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.onechatlayout);
+		setList();
+		setGuiContents();
+		setGuiInputMode(false);
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	@Override
+	protected void onStart() {
+		// TODO Auto-generated method stub
+		super.onStart();
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		super.onDestroy();
+		Log.i("One", "Activity has been destroyed");
+		stopConnection();
+	}
+
+	// -------------------------------------------------------------------------------------
+	private void setList() {
+		al = new ArrayList<Chats>();
+		al.add(new Chats(R.drawable.ic_launcher, "Test 1", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 2", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 3", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 4", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 5", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 6", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 7", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 8", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 9", 1));
+		adapter = new CustomAdapter(this, 0, al);
+		setListAdapter(adapter);
+		this.getListView().setOnScrollListener(this);
+
+		cal = new ArrayList<ChatImage>();
+		scrollToBottomOnCondition(false);
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private void setGuiContents() {
+		Button ok = (Button) findViewById(R.id.but_ok);
+		Button add = (Button) findViewById(R.id.but_additional);
+		ImageView back = (ImageView) findViewById(R.id.iv_one_back);
+		TextView startBut = (TextView) findViewById(R.id.tv_start_but);
+		TextView disconnectBut = (TextView) findViewById(R.id.tv_discon_but);
+		ok.setOnClickListener(this);
+		add.setOnClickListener(this);
+		back.setOnClickListener(this);
+		startBut.setOnClickListener(this);
+		disconnectBut.setOnClickListener(this);
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private void setGuiInputMode(boolean b) {
+		EditText userInput = (EditText) findViewById(R.id.et_userinput);
+		Button ok = (Button) findViewById(R.id.but_ok);
+		Button add = (Button) findViewById(R.id.but_additional);
+		userInput.setClickable(b);
+		userInput.setCursorVisible(b);
+		userInput.setFocusable(b);
+		userInput.setFocusableInTouchMode(b);
+		ok.setClickable(b);
+		ok.setCursorVisible(b);
+		ok.setFocusable(b);
+		ok.setFocusableInTouchMode(b);
+		add.setClickable(b);
+		add.setCursorVisible(b);
+		add.setFocusable(b);
+		add.setFocusableInTouchMode(b);
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	public void onClick(View v) {
+		// TODO Auto-generated method stub
+		if (v.getTag() != null) {
+			int pos = (Integer) v.getTag();
+			Log.i("lv", "index: " + pos);
+		}
+
+		switch (v.getId()) {
+			case R.id.but_ok :
+				EditText et_user = (EditText) findViewById(R.id.et_userinput);
+				String stuff = et_user.getText().toString();
+				et_user.setText("");
+				al.add(new Chats(R.drawable.ic_launcher, stuff, 0));
+				adapter.notifyDataSetChanged();
+				sendChat(stuff);
+				scrollToBottomOnCondition(false);
+				scrollToBottomHandler.sendEmptyMessage(1);
+				break;
+			case R.id.but_additional :
+				Dialog dialog = new Dialog(OneOnOneChatActivity.this);
+				dialog.setContentView(R.drawable.customdialoglayout);
+				dialog.setTitle("Additional stuffs!");
+				Button but_cam = (Button) dialog.findViewById(R.id.but_camera);
+				Button but_load = (Button) dialog.findViewById(R.id.but_image_load);
+				but_cam.setOnClickListener(OneOnOneChatActivity.this);
+				but_load.setOnClickListener(OneOnOneChatActivity.this);
+				dialog.show();
+				break;
+			case R.id.iv_one_back :
+				stopConnection();
+				finish();
+				break;
+			case R.id.tv_start_but :
+				loading_pd = ProgressDialog.show(OneOnOneChatActivity.this, "", "Currently looking for an user!");
+				loading_pd.setCancelable(true);
+				loading_pd.setOnCancelListener(this);
+				this.loading = true;
+				buttonFilter(v.getId());
+				break;
+			case R.id.tv_discon_but :
+				buttonFilter(v.getId());
+				break;
+			case R.id.but_camera :
+				int CAMERA_PICTURE = 0;
+				Intent camIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+				startActivityForResult(camIntent, CAMERA_PICTURE);
+
+				break;
+			case R.id.but_image_load :
+				int SELECT_PICTURE = 1;
+				Intent imgIntent = new Intent(Intent.ACTION_PICK);
+				imgIntent.setType("image/*");
+				imgIntent.setAction(Intent.ACTION_GET_CONTENT);
+				startActivityForResult(Intent.createChooser(imgIntent, "Please select your picture =p"), SELECT_PICTURE);
+				break;
+
+			case R.id.but_quit_cancel :
+				quit_app_dialog.dismiss();
+				break;
+
+			case R.id.but_quit_ok :
+				quit_app_dialog.dismiss();
+				finish();
+				break;
+		}
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	class ProgressDialogThread extends Thread implements Runnable {
+
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			super.run();
+			Log.i("oo", "works1");
+
+		}
+
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		// TODO Auto-generated method stub
+		super.onActivityResult(requestCode, resultCode, data);
+
+		if (resultCode == RESULT_OK) {
+
+			final int CAMERA = 0;
+			final int GALLERY = 1;
+			Log.i("bp", "req: " + requestCode);
+			switch (requestCode) {
+				case CAMERA :
+					Bundle extra = data.getExtras();
+					Bitmap photo = (Bitmap) extra.get("data");
+					ChatImage ch1 = new ChatImage(getApplicationContext(), photo, al.size());
+					cal.add(ch1);
+					al.add(new Chats(R.drawable.ic_launcher, ch1.getCompressedImage(), 3, ch1));
+					ch1.uploadFile();
+					break;
+				case GALLERY :
+					Uri selectedImage = data.getData();
+					String[] filePathColumn = {MediaStore.Images.Media.DATA};
+					Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
+					cursor.moveToFirst();
+
+					int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+					String filePath = cursor.getString(columnIndex);
+					cursor.close();
+
+					Bitmap bmp = BitmapFactory.decodeFile(filePath);
+
+					ChatImage ch = new ChatImage(getApplicationContext(), bmp, al.size());
+					cal.add(ch);
+					al.add(new Chats(R.drawable.ic_launcher, ch.getCompressedImage(), 3, ch));
+					ch.uploadFile();
+					//ch.uploadImage();
+					break;
+			}
+			adapter.notifyDataSetChanged();
+			scrollToBottomOnCondition(false);
+		}
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private synchronized void buttonFilter(int id) {
+
+		class EventHandler extends Thread implements Runnable {
+			private int id;
+			public EventHandler(int i) {
+				id = i;
+			}
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				super.run();
+				switch (id) {
+					case R.id.tv_start_but :
+						START_BUTTON_MESSAGE = 's';
+						chatStartButtonHandler.sendEmptyMessage(1);
+						startConnection();
+						break;
+					case R.id.tv_discon_but :
+						START_BUTTON_MESSAGE = 't';
+						chatStartButtonHandler.sendEmptyMessage(1);
+						stopConnection();
+						break;
+				}
+			}
+		}
+
+		EventHandler ev = new EventHandler(id);
+		ev.start();
+
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private void startConnection() {
+		Thread t1 = new Thread() {
+
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				super.run();
+				try {
+
+					client = new Client(getApplicationContext());
+					client.conntectToServer(al, scrollToBottomHandler, successDialogDismissHandler, finishDialogHandler, disconnectionHandler);
+
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					Log.i("One", "Failed to start chat!: " + e);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					Log.i("One", "IO Exception detected!: " + e);
+				}
+
+			}
+
+		};
+		t1.run();
+	}
+
+	private void stopConnection() {
+		Thread t2 = new Thread() {
+
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				super.run();
+				if (client != null) {
+					client.stopThread();
+					disconnectionHandler.sendEmptyMessage(1);
+				}
+
+			}
+
+		};
+		t2.start();
+
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private void sendChat(String m) {
+		String message = MessageFilter.setNormalMessage(m);
+		client.sendString(message);
+
+		al.add(new Chats(R.drawable.ic_launcher, m, 0));
+		scrollToBottomHandler.sendEmptyMessage(1);
+	}
+
+	private void sendImageUrl() {
+
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private void scrollToBottomOnCondition(boolean condition) {
+
+		int lastSecondVisible = this.getListView().getLastVisiblePosition();
+		if (lastSecondVisible >= al.size() - 2 || !condition) {
+			this.getListView().setSelection(al.size() - 1);
+		}
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	public void onScroll(AbsListView view, int firstVisible, int count, int total) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onScrollStateChanged(AbsListView view, int state) {
+		// TODO Auto-generated method stub
+
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	static class ChatHolder {
+		ImageView imgIcon;
+		TextView txtTitle;
+		ImageView bmp_image;
+	}
+
+	public class CustomAdapter extends ArrayAdapter<Chats> {
+		private static final int MY_CHAT = 0;
+		private static final int OPPO_CHAT = 1;
+		private static final int ANNOUNCEMENT = 2;
+		private static final int MY_IMAGE = 3;
+		private static final int OPPO_IMAGE = 4;
+		Context context;
+		ArrayList<Chats> list;
+
+		public CustomAdapter(Context context, int resource, ArrayList<Chats> l) {
+			super(context, 0, l);
+			this.context = context;
+			this.list = l;
+			Log.i("foo", "test1");
+		}
+
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			View row = null; //by forcing passed in row to be null, it will refresh all the time
+			ChatHolder holder = null;
+
+			if (row == null) {
+
+				LayoutInflater inflater = ((Activity) context).getLayoutInflater();
+				int img = 0;
+				int bmpimg = 0;
+				int txt = 0;
+
+				switch (list.get(position).getChoice()) {
+
+					case MY_CHAT :
+						row = inflater.inflate(R.layout.custom_one_me_row, parent, false);
+						img = R.id.my_imgIcon;
+						txt = R.id.my_txtTitle;
+						break;
+					case OPPO_CHAT :
+						row = inflater.inflate(R.layout.custom_one_oppo_row, parent, false);
+						img = R.id.oppo_imgIcon;
+						txt = R.id.oppo_txtTitle;
+						break;
+					case ANNOUNCEMENT :
+						row = inflater.inflate(R.layout.custom_one_announce_row, parent, false);
+						txt = R.id.my_announcementTxt;
+						break;
+					case MY_IMAGE :
+						row = inflater.inflate(R.layout.custom_my_image_row, parent, false);
+						img = R.id.my_selected_imgIcon;
+						bmpimg = R.id.iv_selected_image;
+						break;
+					case OPPO_IMAGE :
+						row = inflater.inflate(R.layout.custom_oppo_image_row, parent, false);
+						img = R.id.iv_oppo_img_icon;
+						bmpimg = R.id.iv_selected_oppo_image;
+						break;
+				}
+
+				holder = new ChatHolder();
+				if (list.get(position).getChoice() != MY_IMAGE && list.get(position).getChoice() != OPPO_IMAGE) {
+					holder.txtTitle = (TextView) row.findViewById(txt);
+					holder.txtTitle.setText(list.get(position).getText());
+				}
+				if (list.get(position).getChoice() != ANNOUNCEMENT) {
+					holder.imgIcon = (ImageView) row.findViewById(img);
+					holder.imgIcon.setImageResource(list.get(position).getIcon());
+				}
+				if (list.get(position).getChoice() == MY_IMAGE || list.get(position).getChoice() == OPPO_IMAGE) {
+					holder.bmp_image = (ImageView) row.findViewById(bmpimg);
+					holder.bmp_image.setImageBitmap(list.get(position).getCamBitmap());
+					setListElementClickListener(holder.bmp_image);
+					holder.bmp_image.setTag(getImageIndexPos(position));
+					holder.bmp_image.setFocusable(true);
+					holder.bmp_image.setClickable(true);
+
+				}
+
+				row.setTag(holder);
+			}
+
+			//Chats chat = list.get(position);
+
+			return row;
+		}
+
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private void setListElementClickListener(View v) {
+		v.setOnClickListener(this);
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private int getImageIndexPos(int pos) {
+		for (int i = 0; i < cal.size(); i++) {
+			if (cal.get(i).getPosition() == pos) {
+				return i;
+			}
+		}
+		return 0;
+	}
+
+	public void onCancel(DialogInterface arg0) {
+		// TODO Auto-generated method stub
+		Log.i("p", "works2");
+		//FINISH_DIALOG_MESSAGE = 'c';
+		//finishDialogHandler.sendEmptyMessage(1);
+		this.stopConnection();
+	}
+
+}

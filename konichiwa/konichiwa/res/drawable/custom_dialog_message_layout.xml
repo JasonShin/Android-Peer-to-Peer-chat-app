@@ -1,0 +1,12 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout_root"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="horizontal"
+    android:padding="10dp" >
+    
+    <TextView 
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:text="Hello there! Are you enjoying having chat with strangers from all around the world? My name is Jason and I'm from Australia. I like to build applications that can help people and people to communicate and can have fun with it. I will continue update the application by adding new features and stuff, because this is only a beginning I hope you guys are having good time, and if you have any suggestions, plz send me an email to visualbbasic@gmail.com" />
+</LinearLayout>

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical" >
+
+        <FrameLayout
+            android:layout_width="fill_parent"
+            android:layout_height="60dp"
+            android:background="@drawable/background_gradient_blue" >
+
+            <ImageView
+                android:id="@+id/iv_option"
+                android:layout_width="38dp"
+                android:layout_height="fill_parent"
+                android:src="@drawable/option" />
+
+            <TextView
+                android:id="@+id/tv_one_title"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:gravity="center"
+                android:text="Gooday"
+                android:textColor="#FFFFFF"
+                android:textSize="20dp" >
+            </TextView>
+
+            <TextView
+                android:id="@+id/tv_start_but"
+                android:layout_width="wrap_content"
+                android:layout_height="fill_parent"
+                android:layout_gravity="center_vertical|right"
+                android:background="@drawable/background_gradient_darkblue"
+                android:gravity="center"
+                android:text="@string/start"
+                android:textColor="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/tv_discon_but"
+                android:layout_width="wrap_content"
+                android:layout_height="fill_parent"
+                android:layout_gravity="center_vertical|right"
+                android:background="@drawable/background_gradient_darkblue"
+                android:gravity="center"
+                android:text="@string/Disconnect"
+                android:textColor="#FFFFFF"
+                android:visibility="invisible" />
+        </FrameLayout>
+
+        <!-- android:background="@drawable/chat_back_repeat_three" -->
+
+        <LinearLayout
+            android:id="@+id/ll_chat_stuffs"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:orientation="vertical"
+            android:tileMode="repeat" >
+
+            <ListView
+                android:id="@android:id/list"
+                android:layout_width="fill_parent"
+                android:layout_height="0dip"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:cacheColorHint="@android:color/transparent"
+                android:divider="@null"
+                android:dividerHeight="0dp" >
+            </ListView>
+
+            <LinearLayout
+                android:layout_width="fill_parent"
+                android:layout_height="50dp"
+                android:orientation="horizontal" >
+
+                <Button
+                    android:id="@+id/but_additional"
+                    android:layout_width="40dp"
+                    android:layout_height="fill_parent"
+                    android:text="@string/string_additional" />
+
+                <EditText
+                    android:id="@+id/et_userinput"
+                    android:layout_width="0dip"
+                    android:layout_height="fill_parent"
+                    android:layout_weight="1" />
+
+                <Button
+                    android:id="@+id/but_ok"
+                    android:layout_width="50dp"
+                    android:layout_height="fill_parent"
+                    android:text="@string/string_ok" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- desired size = 250, 300 -->
+
+    <LinearLayout
+        android:id="@+id/setting_panel"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_gravity="top"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="40dp"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:weightSum="1" >
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight=".85"
+            android:background="@drawable/background_gradient_greeny"
+            android:weightSum="1" >
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="fill_parent"
+                android:layout_gravity="center_vertical|left"
+                android:src="@drawable/option" />
+
+            <TextView
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:gravity="right"
+                android:text="Settings"
+                android:textColor="#FFFFFF"
+                android:textSize="15dp" />
+        </LinearLayout>
+
+        <ListView
+            android:id="@+id/lv_option"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight=".15"
+            android:background="@drawable/setting_listview_repeat"
+            android:cacheColorHint="@android:color/transparent"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:entries="@array/settings_stuffs" />
+    </LinearLayout>
+
+</FrameLayout>

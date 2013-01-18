@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	
+	<!-- APP -->
+    <string name="app_name">Good day Random Chat</string>
+	
+    <!-- SPRITE ACTIVITY -->
+    <string name="string_credit">Developed by JASON MARSH</string>
+    
+    <!-- LOBBY ACTIVITY -->
+    <string-array name="settings_stuffs">
+        <item>My profile</item>
+        <item>set background</item>
+        <item>developers comments</item>
+        
+    </string-array>
+    
+    <!-- MY PROFILE ACTIVITY -->
+    <string-array name="my_profile_stuffs">
+        <item>Change icon</item>
+        <item>Age</item>
+        <item>Country</item>
+    </string-array>
+    <!-- One on one chat -->
+    <string name = "string_ok">OK</string>
+    <string name = "string_additional">+</string>
+    <string name = "start">Start new</string>
+    <string name = "Disconnect">Disconnect</string>
+    
+    <!-- Client -->
+    <string name = "client_attempt">Attempting to connect with a random person ...</string>
+    
+    
+</resources>

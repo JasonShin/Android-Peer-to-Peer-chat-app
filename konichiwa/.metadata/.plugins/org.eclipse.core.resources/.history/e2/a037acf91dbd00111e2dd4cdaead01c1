@@ -1,0 +1,346 @@
+package com.konichiwalivejason.www;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import android.content.Context;
+import android.util.Log;
+import android.widget.Toast;
+
+public class MySql {
+
+	//private InputStream is;
+
+	private Context context;
+	private static final String PATH = "http://10.0.2.2/";
+	private static final int TIMEOUT_MILLISEC = 10000;
+	private static final String INSERT_NEW_DUDE = "my_query_insert_new.php";
+	private static final String SELECT_ALL = "my_query_one.php";
+	private static final String CHECK_DUPULICATE = "my_query_check_duplicate.php";
+	private static final String CHECK_ONLINE = "my_query_last_connection.php";
+	private static final String UPDATE_CONNECTION = "my_query_update_connection.php";
+	private static final String UPDATE_INONECHAT = "my_query_update_inonechat.php";
+	private static final String GET_NUM_SERVER = "my_query_get_num_server_one.php";
+	private static final String GET_NUM_CLIENT = "my_query_get_num_client_one.php";
+	private static final String UPDATE_SERVER_OR_CLIENT = "my_query_update_server_or_client.php";
+	private static final String ADMIN_CHECK = "my_query_check_admin.php";
+	private static final String GET_RANDOM_IP = "my_query_get_random_person.php";
+
+	public MySql(Context context) {
+		this.context = context;
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	protected void select(InputStream is) throws JSONException {
+		try {
+			//parse json data
+			String result = this.responseToString(is);
+			JSONArray jArray = new JSONArray(result);
+			for (int i = 0; i < jArray.length(); i++) {
+				JSONObject json_data = jArray.getJSONObject(i);
+			}
+		} catch (Exception e) {
+			Log.e("log_tag", "Error in http connection " + e.toString());
+		}
+	}
+
+	// --------------------------------------------------------------------------------------------------
+
+	protected JSONObject jsonDuplicate(String IP) {
+		JSONObject json = new JSONObject();
+		try {
+			json.put("USER_IP", IP);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return json;
+	}
+
+	protected boolean checkDuplicate(String IP) {
+		boolean bresult = false;
+		try {
+			//parse json data
+			JSONObject j = jsonDuplicate(IP);
+			InputStream is = requestQuery(CHECK_DUPULICATE, j);
+			String sresult = this.responseToString(is);
+
+			//check ip address pattern
+			Pattern pattern = Pattern.compile("(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)");
+			//parse json to string
+			JSONArray jArray = new JSONArray(sresult);
+			JSONObject jo = jArray.getJSONObject(0);
+			String ipAddress = jo.getString("USER_IP").toString();
+			//attemp matching with pattern
+			Matcher matcher = pattern.matcher(ipAddress);
+			boolean validated = (matcher.find() && matcher.group().equals(ipAddress));
+
+			if (validated) {
+				Log.i("Online", "The IP is duplicated!");
+				bresult = true;
+			}
+
+		} catch (Exception e) {
+			Log.e("log_tag", "Error in http connection " + e.toString());
+		}
+		return bresult;
+	}
+
+	// --------------------------------------------------------------------------------------------------
+
+	protected String getRandomIP(String SOV) {
+		String randomIp = "";
+		try {
+			JSONObject json = new JSONObject();
+			json.put("SOV", SOV);
+
+			InputStream is = requestQuery(GET_RANDOM_IP, json);
+			String sresult = this.responseToString(is);
+			
+			JSONArray jArray = new JSONArray(sresult);
+			JSONObject jo = jArray.getJSONObject(0);
+			randomIp = jo.getString("USER_IP").toString();
+			Log.i("One", "Successfully found a random person!");
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			Log.i("One", "Error with finding a random person!: " + e);
+		}
+		return randomIp;
+	}
+
+	// --------------------------------------------------------------------------------------------------
+
+	// 0 = not in one on one chat
+	// 1 = in chat and waiting for connection
+	// 2 = currently having a chat with someone else
+	protected void updateInOneChat(int i, String IP) {
+		try {
+			JSONObject json = new JSONObject();
+			json.put("inonechat", i);
+			json.put("ip", IP);
+			requestQuery(UPDATE_INONECHAT, json);
+			Log.i("One", "updated in one chat!");
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			Log.i("One", "Found error during updating in one chat status! = " + e);
+		}
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	protected int updateAndGetDuty(String IP) {
+		int beingWhat = beingWhatNow();
+		try {
+			//0 = server, 1 = client
+
+			Log.i("sc", "Currently i have to be: " + beingWhat);
+			JSONObject json = new JSONObject();
+			json.put("beingwhat", beingWhat);
+			json.put("ip", IP);
+			requestQuery(UPDATE_SERVER_OR_CLIENT, json);
+
+		} catch (JSONException e) {
+			Log.i("sc", "Unable to update being server or client: " + e);
+		}
+		return beingWhat;
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	//0 = server, 1 = client
+	public int beingWhatNow() {
+		int b = 0;
+		try {
+
+			InputStream numServerIs = requestQuery(GET_NUM_SERVER, null);
+			InputStream numClientIs = requestQuery(GET_NUM_CLIENT, null);
+
+			//parsing json string to num
+			JSONArray jArray = new JSONArray(responseToString(numServerIs));
+			JSONObject jo = jArray.getJSONObject(0);
+			String snumServ = jo.getString("NUM_SERVER").toString();
+
+			JSONArray jArray2 = new JSONArray(responseToString(numClientIs));
+			JSONObject jo2 = jArray2.getJSONObject(0);
+			String snumCli = jo2.getString("NUM_CLIENT").toString();
+
+			int numServer = Integer.parseInt(snumServ);
+			int numClient = Integer.parseInt(snumCli);
+			b = (numServer > numClient) ? 1 : 0;
+		} catch (JSONException e) {
+			Log.i("sc", "Unable to update being server or client: " + e);
+		}
+		return b;
+	}
+
+	// --------------------------------------------------------------------------------------------------
+
+	protected boolean checkOnline(String IP) {
+		boolean bResult = false;
+		try {
+			//parse json data
+			JSONObject j = jsonDuplicate(IP);
+			InputStream is = requestQuery(CHECK_ONLINE, j);
+			String sresult = this.responseToString(is);
+
+			if (sresult != null) {
+				UserTime ut = new UserTime(context);
+				JSONArray jArray = new JSONArray(sresult);
+				JSONObject jo = jArray.getJSONObject(0);
+				int MIN_LIM = 5; //refreshing time
+				String LAST_CONNECTION = jo.getString("LAST_CONNECTION").toString();
+				String CURRENT_TIME = ut.getAusFullTime();
+				int pc[] = ut.decodeTime(LAST_CONNECTION); //parsed last connection
+				int ct[] = ut.decodeTime(CURRENT_TIME);
+				int min_interval = ct[3] > pc[3] ? (60 + ct[4]) - pc[4] : ct[4] - pc[4];
+				Log.i("foo", "min interval: " + min_interval);
+				//YEAR && MONTH && DAY && HOUR && MIN && SEC
+				if (pc[0] == ct[0] && pc[1] == ct[1] && pc[2] == ct[2] && pc[3] == ct[3] && (min_interval <= MIN_LIM || pc[4] >= ct[4])) {
+					bResult = true;
+				}
+
+			}
+
+		} catch (Exception e) {
+			Log.i("Online", "Error with online check!: " + e);
+		}
+		return bResult;
+	}
+
+	// --------------------------------------------------------------------------------------------------
+
+	public boolean adminCheck(String IP) {
+		try {
+			JSONObject json = new JSONObject();
+			json.put("USER_IP", IP);
+			InputStream is = requestQuery(ADMIN_CHECK, json);
+			String sresult = this.responseToString(is);
+
+			JSONArray jArray = new JSONArray(sresult);
+			JSONObject jo = jArray.getJSONObject(0);
+			String admin = jo.getString("ADMINISTRATOR").toString();
+			if (admin.equals("1")) {
+				Log.i("ad", "You are now logging in as Admin!");
+				return true;
+			}
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return false;
+	}
+
+	// --------------------------------------------------------------------------------------------------
+
+	protected void insertNewDude(String location, String IP, String icon, String lastConnection) {
+		try {
+			JSONObject json = new JSONObject();
+			json.put("location", location);
+			json.put("ip", IP);
+			json.put("icon", icon);
+			json.put("connection", lastConnection);
+			requestQuery(INSERT_NEW_DUDE, json);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+
+	// --------------------------------------------------------------------------------------------------
+
+	protected void updateConnection(String IP, String lastConnection) {
+		try {
+			Log.i("time", lastConnection);
+			JSONObject json = new JSONObject();
+			json.put("ip", IP);
+			json.put("connection", lastConnection);
+			requestQuery(UPDATE_CONNECTION, json);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			Log.i("One", "Failed to update!: " + e);
+		}
+
+	}
+
+	// --------------------------------------------------------------------------------------------------
+
+	private InputStream requestQuery(String FILENAME, JSONObject json) {
+		InputStream is = null;
+		try {
+			ArrayList<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+
+			HttpClient client = new DefaultHttpClient(setHttpParams());
+			HttpPost request = new HttpPost(PATH + FILENAME);
+
+			//request.setEntity(new ByteArrayEntity(json.toString().getBytes("UTF8")));
+			if (json != null) {
+				request.setEntity(new ByteArrayEntity(json.toString().getBytes("UTF8")));
+				request.setHeader("json", json.toString());
+			} else {
+				request.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+			}
+			HttpResponse response = client.execute(request);
+			HttpEntity entity = response.getEntity();
+
+			// If the response does not enclose an entity, there is no need
+			if (entity != null) {
+				is = entity.getContent();
+			}
+		} catch (Throwable t) {
+			Toast.makeText(context, "The request has failed :( = " + t.toString(), Toast.LENGTH_SHORT).show();
+		}
+		return is;
+	}
+
+	// --------------------------------------------------------------------------------------------------
+
+	private String responseToString(InputStream is) {
+		String result = "";
+		try {
+			//========= convert response to string ========= //
+			BufferedReader reader = new BufferedReader(new InputStreamReader(is, "iso-8859-1"), 8);
+			StringBuilder sb = new StringBuilder();
+			String line = null;
+			while ((line = reader.readLine()) != null)
+				sb.append(line + "\n");
+
+			Log.i("rts", "works!");
+			is.close();
+			result = sb.toString();
+			Log.i("rts", "works! 2");
+		} catch (Exception e) {
+			Log.e("rts", "Error converting result " + e.toString());
+		}
+		return result;
+	}
+
+	// --------------------------------------------------------------------------------------------------
+
+	private HttpParams setHttpParams() {
+		HttpParams httpParams = new BasicHttpParams();
+		HttpConnectionParams.setConnectionTimeout(httpParams, TIMEOUT_MILLISEC);
+		HttpConnectionParams.setSoTimeout(httpParams, TIMEOUT_MILLISEC);
+		return httpParams;
+	}
+
+	// --------------------------------------------------------------------------------------------------
+
+}

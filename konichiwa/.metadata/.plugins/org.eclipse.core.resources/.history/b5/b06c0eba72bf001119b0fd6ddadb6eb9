@@ -1,0 +1,387 @@
+package com.konichiwalivejason.www;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+
+import android.app.Activity;
+import android.app.ListActivity;
+import android.content.Context;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.ViewGroup;
+import android.widget.AbsListView;
+import android.widget.AbsListView.OnScrollListener;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+public class OneOnOneChatActivity extends ListActivity implements OnClickListener, OnScrollListener {
+	private OnlineStatusManager osm;
+	private ArrayList<Chats> al;
+	private CustomAdapter adapter;
+	private Client client;
+	private Server server;
+	private int CURRENT_STATE; //SERVER OR CLIENT
+	private char HANDLER2_MESSAGE = 's';
+
+	private Handler handler1 = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			// TODO Auto-generated method stub
+			super.handleMessage(msg);
+			adapter.notifyDataSetChanged();
+			scrollToBottomOnCondition(true);
+		}
+
+	};
+
+	//This is for connect and disconnect button
+	private Handler handler2 = new Handler() {
+		private static final char CHAR_START = 's';
+		private static final char CHAR_STOP = 't';
+		@Override
+		public void handleMessage(Message msg) {
+			// TODO Auto-generated method stub
+			super.handleMessage(msg);
+			TextView start_but = (TextView) findViewById(R.id.tv_start_but);
+
+			switch (HANDLER2_MESSAGE) {
+				case 's' :
+					start_but.setText(R.string.Disconnect);
+					al.add(new Chats("Waiting for someone to be connected....", 2));
+					HANDLER2_MESSAGE = CHAR_STOP;
+					break;
+				case 't' :
+					start_but.setText(R.string.start);
+					HANDLER2_MESSAGE = CHAR_START;
+					al.add(new Chats("You are disconnected with the user", 2));
+					setGuiInputMode(false);
+					break;
+			}
+			adapter.notifyDataSetChanged();
+			scrollToBottomOnCondition(false);
+		}
+
+	};
+
+	private Handler handler3 = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			// TODO Auto-generated method stub
+			super.handleMessage(msg);
+			setGuiInputMode(true);
+			al.add(new Chats("You have been successfully connected with an user!", 2));
+			adapter.notifyDataSetChanged();
+
+		}
+
+	};
+
+	// -------------------------------------------------------------------------------------
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.onechatlayout);
+		setList();
+		setGuiContents();
+		setGuiInputMode(false);
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	@Override
+	protected void onStart() {
+		// TODO Auto-generated method stub
+		super.onStart();
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		super.onDestroy();
+		Log.i("One", "Activity has been destroyed");
+		//osm.stopThread();
+		//client.stopThread();
+		stopChat();
+	}
+
+	// -------------------------------------------------------------------------------------
+	private void setList() {
+		al = new ArrayList<Chats>();
+		al.add(new Chats(R.drawable.ic_launcher, "Test 1", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 2", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 3", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 4", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 5", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 6", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 7", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 8", 0));
+		al.add(new Chats(R.drawable.ic_launcher, "Test 9", 1));
+		adapter = new CustomAdapter(this, 0, al);
+		setListAdapter(adapter);
+		this.getListView().setOnScrollListener(this);
+		scrollToBottomOnCondition(false);
+
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private void setGuiContents() {
+		Button ok = (Button) findViewById(R.id.but_ok);
+		Button add = (Button) findViewById(R.id.but_additional);
+		ImageView back = (ImageView) findViewById(R.id.iv_one_back);
+		TextView startBut = (TextView) findViewById(R.id.tv_start_but);
+		ok.setOnClickListener(this);
+		add.setOnClickListener(this);
+		back.setOnClickListener(this);
+		startBut.setOnClickListener(this);
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private void setGuiInputMode(boolean b) {
+		EditText userInput = (EditText) findViewById(R.id.et_userinput);
+		Button ok = (Button) findViewById(R.id.but_ok);
+		Button add = (Button) findViewById(R.id.but_additional);
+		userInput.setClickable(b);
+		userInput.setCursorVisible(b);
+		userInput.setFocusable(b);
+		userInput.setFocusableInTouchMode(b);
+		ok.setClickable(b);
+		ok.setCursorVisible(b);
+		ok.setFocusable(b);
+		ok.setFocusableInTouchMode(b);
+		add.setClickable(b);
+		add.setCursorVisible(b);
+		add.setFocusable(b);
+		add.setFocusableInTouchMode(b);
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	public void onClick(View v) {
+		// TODO Auto-generated method stub
+		switch (v.getId()) {
+			case R.id.but_ok :
+				EditText et_user = (EditText) findViewById(R.id.et_userinput);
+				String stuff = et_user.getText().toString();
+				et_user.setText("");
+				al.add(new Chats(R.drawable.ic_launcher, stuff, 0));
+				adapter.notifyDataSetChanged();
+				sendChat(stuff);
+				scrollToBottomOnCondition(false);
+				handler1.sendEmptyMessage(1);
+				break;
+			case R.id.but_additional :
+				break;
+			case R.id.iv_one_back :
+				stopChat();
+				finish();
+				break;
+			case R.id.tv_start_but :
+				butCrap();
+				break;
+		}
+	}
+
+	// -------------------------------------------------------------------------------------
+	public synchronized void butCrap() {
+		handler2.sendEmptyMessage(1);
+
+		ButStuffThread bst = new ButStuffThread();
+		bst.start();
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	class ButStuffThread extends Thread implements Runnable {
+		private static final char CHAR_START = 's';
+		private static final char CHAR_STOP = 't';
+
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			super.run();
+
+			switch (HANDLER2_MESSAGE) {
+				case CHAR_START :
+					try {
+						startChat();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					break;
+				case CHAR_STOP :
+					stopChat();
+					break;
+			}
+		}
+
+	}
+	// -------------------------------------------------------------------------------------
+	//0 = server, 1 = client
+	private void startChat() throws IOException {
+		InetAddress thisIp;
+		try {
+			thisIp = InetAddress.getLocalHost();
+			String ip = thisIp.getHostAddress();
+			MySql mysql = new MySql(this);
+			int beingWhat = mysql.updateAndGetDuty(ip);
+			//CURRENT_STATE = beingWhat;
+			//0 = server, 1 = client
+			CURRENT_STATE = 1;
+			if (CURRENT_STATE == 1) {
+				Log.i("cl", "I AM CURRENTLY BEING A CLIENT");
+				client = new Client(getApplicationContext());
+				client.conntectToServer(al, handler1);
+
+				//server = new Server();
+				//server.startAcceptingClient(al, handler1, handler3);
+			} else {
+				Log.i("sv", "I AM CURRENTLY BEING A SERVER");
+				server = new Server();
+				server.startAcceptingClient(al, handler1, handler3);
+			}
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			Log.i("One", "Failed to start chat!: " + e);
+		}
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private void sendChat(String m) {
+		try {
+			if (CURRENT_STATE == 1) {
+				//client
+				client.sendString(m);
+			} else {
+				//server
+				server.sendToClient(m);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private void stopChat() {
+		if (CURRENT_STATE == 1) {
+			//client
+			client.stopThread();
+		} else {
+			//server
+			server.stopThread();
+		}
+
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	private void scrollToBottomOnCondition(boolean condition) {
+
+		int lastSecondVisible = this.getListView().getLastVisiblePosition();
+		if (lastSecondVisible >= al.size() - 2 || !condition) {
+			this.getListView().setSelection(al.size() - 1);
+		}
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	public void onScroll(AbsListView view, int firstVisible, int count, int total) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void onScrollStateChanged(AbsListView view, int state) {
+		// TODO Auto-generated method stub
+
+	}
+
+	// -------------------------------------------------------------------------------------
+
+	static class ChatHolder {
+		ImageView imgIcon;
+		TextView txtTitle;
+	}
+
+	public class CustomAdapter extends ArrayAdapter<Chats> {
+		private static final int MY_CHAT = 0;
+		private static final int OPPO_CHAT = 1;
+		private static final int ANNOUNCEMENT = 2;
+		Context context;
+		ArrayList<Chats> list;
+
+		public CustomAdapter(Context context, int resource, ArrayList<Chats> l) {
+			super(context, 0, l);
+			this.context = context;
+			this.list = l;
+			Log.i("foo", "test1");
+		}
+
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			View row = null; //by forcing passed in row to be null, it will refresh all the time
+			ChatHolder holder = null;
+
+			if (row == null) {
+
+				LayoutInflater inflater = ((Activity) context).getLayoutInflater();
+				Log.i("foo", "test1");
+				int img = 0;
+				int txt = 0;
+				switch (list.get(position).getChoice()) {
+
+					case MY_CHAT :
+						row = inflater.inflate(R.layout.custom_one_me_row, parent, false);
+						img = R.id.my_imgIcon;
+						txt = R.id.my_txtTitle;
+						Log.i("foo", "test2");
+						break;
+					case OPPO_CHAT :
+						row = inflater.inflate(R.layout.custom_one_oppo_row, parent, false);
+						img = R.id.oppo_imgIcon;
+						txt = R.id.oppo_txtTitle;
+						break;
+					case ANNOUNCEMENT :
+						row = inflater.inflate(R.layout.custom_one_announce_row, parent, false);
+						txt = R.id.my_announcementTxt;
+				}
+
+				holder = new ChatHolder();
+				holder.txtTitle = (TextView) row.findViewById(txt);
+				holder.txtTitle.setText(list.get(position).getText());
+
+				if (list.get(position).getChoice() != ANNOUNCEMENT) {
+					holder.imgIcon = (ImageView) row.findViewById(img);
+					holder.imgIcon.setImageResource(list.get(position).getIcon());
+				}
+
+				row.setTag(holder);
+			}
+
+			//Chats chat = list.get(position);
+
+			return row;
+		}
+	}
+
+	// -------------------------------------------------------------------------------------
+
+}

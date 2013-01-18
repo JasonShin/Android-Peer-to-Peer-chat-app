@@ -1,0 +1,14 @@
+#Sun Jun 24 20:35:16 EST 2012
+text_Rd_rdSectionTag.underline=false
+text_R_rUndefined.underline=false
+text_R_rFlowcontrol.bold=false
+text_Rd_taskTag.italic=false
+text_R_taskTag.italic=false
+text_R_rRoxygenTag.italic=false
+text_R_rRoxygen.italic=false
+text_R_rUndefined.strikethrough=true
+text_Rd_rdComment.italic=false
+eclipse.preferences.version=1
+text_R_rComment.italic=false
+text_Rd_rdSectionTag.strikethrough=false
+text_Rd_rdSectionTag.bold=false

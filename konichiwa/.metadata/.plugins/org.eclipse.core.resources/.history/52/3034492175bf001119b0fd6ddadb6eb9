@@ -1,0 +1,230 @@
+package com.konichiwalivejason.www;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OptionalDataException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+
+import com.konichiwalivejason.www.OneOnOneChatActivity.CustomAdapter;
+
+import android.content.Context;
+import android.os.Handler;
+import android.util.Log;
+import android.widget.ArrayAdapter;
+
+public class Client {
+
+	private volatile Thread blinker;
+	private volatile Thread blinker2;			//for online status
+	private ObjectOutputStream output;
+	private ObjectInputStream input;
+	private Socket connection;
+	private String MyIP;
+	private Context context;
+	private static final int PORT = 5000;
+	private ArrayList<Chats> al;
+	private Handler handler;
+	private Handler handler3;
+	private OnlineStatusManager osm;
+
+
+	public Client(Context context) {
+		this.context = context;
+		
+	}
+
+	// --------------------------------------------------------------------------
+	//0 = server, 1 = client
+	public void conntectToServer(ArrayList<Chats> al, Handler h, Handler h3) throws IOException {
+		Log.i("cl", "works");
+		this.al = al;
+		this.handler = h;
+		this.handler3 = h3;
+		
+		InetAddress thisIp = InetAddress.getLocalHost();
+		MyIP = thisIp.getHostAddress();
+		
+		ConnectingThreadClass ctc = new ConnectingThreadClass();
+		ctc.start();
+		osm = new OnlineStatusManager(context);
+		osm.start();
+	}
+	// --------------------------------------------------------------------------
+	
+	class ConnectingThreadClass extends Thread implements Runnable {
+		private static final int TIME_OUT = 5000;
+
+		public ConnectingThreadClass() {
+			blinker = this;
+		}
+
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			super.run();
+			boolean initialSleep = false;
+			Thread thisThread = Thread.currentThread();
+			while (blinker == thisThread) {
+				try {
+					if (initialSleep)
+						Thread.sleep(TIME_OUT);
+
+					//getting random IP
+					/*
+					 * MySql mysql = new MySql(context); IP = mysql.getRandomIP("1");
+					 */
+					
+					//InetAddress.getByName("127.0.0.1")
+					Log.i("cl", "Client: attempt to connect!");
+					attemptToConnect();
+					//if socket is connected eventually
+					if (connection.isConnected()) {
+						Log.i("cl", "You have successfully connected with a server");
+						
+						setUpStreams();
+						ReceivingThread rt = new ReceivingThread();
+						rt.start();
+						ConnectionCheckingThread cct = new ConnectionCheckingThread();
+						cct.start();
+						break;
+					}
+					initialSleep = true;
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					Log.i("cl", "Client connection error!: " + e);
+					initialSleep = true;
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					Log.i("cl", "Client connection error!: " + e);
+					break;
+				}
+				Log.i("cl", "Client has failed to connect to a server!");
+			}
+		}
+	}
+	
+	// --------------------------------------------------------------------------
+	
+	private void attemptToConnect() throws UnknownHostException, IOException {
+		InetAddress serverAddr = InetAddress.getByName("10.0.2.2");
+		connection = new Socket(serverAddr, PORT);
+		
+	}
+
+	// --------------------------------------------------------------------------
+
+	private void setUpStreams() throws IOException {
+		output = new ObjectOutputStream(connection.getOutputStream());
+		output.flush();
+		input = new ObjectInputStream(connection.getInputStream());
+	}
+	// --------------------------------------------------------------------------
+	
+	private void startListening() throws OptionalDataException, ClassNotFoundException, IOException{
+		String message = (String) input.readObject();
+		al.add(new Chats(R.drawable.ic_launcher, message, 1));
+		handler.sendEmptyMessage(1);
+	}
+	
+
+	// --------------------------------------------------------------------------
+	
+	class ReceivingThread extends Thread implements Runnable{
+
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			super.run();
+			try {
+				startListening();
+				
+			} catch (OptionalDataException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+	}
+	
+	// --------------------------------------------------------------------------
+	
+	class ConnectionCheckingThread extends Thread implements Runnable{
+		
+		public ConnectionCheckingThread(){
+			blinker2 = this;
+		}
+		
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			super.run();
+			Thread thisThread = Thread.currentThread();
+			
+			while(blinker2 == thisThread){
+				try {
+					
+					output.writeObject("Client: %%%%%%");
+					
+					Thread.sleep(7000);
+					Log.i("cl", "Successfully checked online status socket");
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					Log.i("cl", "Found error while attemping to sleep thread!");
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					Log.i("cl", "Found error while outputing online check!");
+				}
+				
+			}
+		}
+		
+	}
+	
+	// --------------------------------------------------------------------------
+
+	public void sendString(String msg) {
+		try {
+			output.writeObject(msg);
+			Log.i("cl", "Successfully written a message");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			Log.i("cl", "Found Error while sending string!");
+		}
+	}
+
+	// --------------------------------------------------------------------------
+
+	protected void stopThread() {
+		Thread tmp = blinker;
+		Thread tmp2 = blinker2;
+		blinker = null;
+		blinker2 = null;
+		if (tmp != null) {
+			Log.i("cl", "Stopping client thread");
+			tmp.interrupt();
+			tmp2.interrupt();
+			try {
+				connection.close();
+				input.close();
+				output.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				Log.i("cl", "Failed to close socket and IO!");
+			}
+		}
+		
+	}
+
+	// --------------------------------------------------------------------------
+
+}
