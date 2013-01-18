@@ -41,7 +41,7 @@ public class ChatImage {
 		try {
 			con = new FTPClient();
 			con.connect(url);
-			if (con.login("a9576965", "ftppassword123")) {
+			if (con.login("***************", "**************")) {
 				con.enterLocalPassiveMode();
 				con.setFileType(FTP.BINARY_FILE_TYPE); //  Very Important
 				ByteArrayOutputStream bos = new ByteArrayOutputStream();

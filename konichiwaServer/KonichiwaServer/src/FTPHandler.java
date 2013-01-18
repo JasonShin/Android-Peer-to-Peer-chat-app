@@ -4,8 +4,8 @@ import org.apache.commons.net.ftp.FTPClient;
 
 public class FTPHandler {
 
-	private static final String URL = "jasondatabase.uphero.com";
-	private static final String FILE_PATH = "/public_html/konimages/";
+	private static final String URL = "*********************";
+	private static final String FILE_PATH = "******************";
 
 	public void deleteAssociatedFiles(ArrayList<String> l) {
 
@@ -13,7 +13,7 @@ public class FTPHandler {
 		con = new FTPClient();
 		try {
 			con.connect(URL);
-			if (con.login("a9576965", "ftppassword123")) {
+			if (con.login("************", "**********")) {
 
 				for(String file : l){
 					boolean deleted = con.deleteFile(FILE_PATH + file);

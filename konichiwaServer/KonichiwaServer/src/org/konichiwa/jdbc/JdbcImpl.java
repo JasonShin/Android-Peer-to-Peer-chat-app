@@ -9,9 +9,9 @@ import java.sql.Statement;
 public class JdbcImpl {
 
 	private int dbResult;
-	private String dbURL = "jdbc:mysql://localhost/konanalysis";
-	private String userName = "root";
-	private String password = "password";
+	private String dbURL = "*********************";
+	private String userName = "************";
+	private String password = "**************";
 	private String query = "SELECT * FROM application_status";
 	private String query2 = "UPDATE application_status SET num_online_total = ";
 	private Connection con;
